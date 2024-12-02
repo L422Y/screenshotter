@@ -16,224 +16,148 @@
         </div>
       </template>
 
-      <div class="mb-6 space-y-4">
-        <div class="flex justify-between items-center">
-          <UInput
-              v-model="newSetName"
-              class="max-w-xs"
-              placeholder="URL Set Name"
-          />
-          <UButton
-              :disabled="!urlsSaveable"
-              variant="soft"
-              @click="saveCurrentUrls"
-          >
-            Save Current URLs
-          </UButton>
-        </div>
-        {{selectedSetId}}
-        <USelect
-            v-if="urlSets.length"
-            :value="selectedSetId"
-            :options="urlSets"
-            option-attribute="name"
-            value-attribute="id"
-            placeholder="Load saved URL set"
-            @update:model-value="loadUrlSet($event)"
-        >
-          <template #option="{ option: set }">
-            <div class="flex justify-between items-center w-full">
-              <span>{{ set.name }}</span>
-              <div class="flex gap-2">
-          <span class="text-sm text-gray-500">
-            {{ set.urls.length }} URLs
-          </span>
-                <UButton
-                    color="red"
-                    icon="i-heroicons-trash"
-                    size="xs"
-                    variant="ghost"
-                    @click.stop="deleteSet(set.id)"
-                />
-              </div>
-            </div>
-          </template>
-        </USelect>
-      </div>
-
-      <UForm :state="formState" class="space-y-6" @submit="processUrls">
-        <UFormGroup label="Enter URLs (one per line)" name="urls">
-          <UTextarea
-              v-model="formState.urls"
-              :rows="6"
-              placeholder="https://example.com&#10;https://google.com"
-          />
-        </UFormGroup>
-
-        <UDivider/>
-
-        <UAccordion :items="[{ label: 'Screenshot Options', slot: 'options' }]" :default-open="true">
-          <template #options>
-            <div class="space-y-4 p-4">
-              <UFormGroup label="Device Preset" name="devicePreset">
-                <USelect
-                    v-model="formState.devicePresetName"
-                    :options="DEVICE_PRESETS"
-                    option-attribute="name"
-                    placeholder="Select a device or custom size"
-                    value-attribute="name"
-                    @update:modelValue="updateViewportFromPreset"
-                />
-              </UFormGroup>
-
-              <UFormGroup
-                  v-if="formState.devicePresetName === 'Custom'"
-                  label="Custom Viewport Size"
-                  name="viewport"
+      <div v-if="showForm">
+        <div class="mb-6 space-y-4">
+          <div class="flex justify-between items-center">
+            <UInput
+                v-model="newSetName"
+                class="max-w-xs"
+                placeholder="URL Set Name"
+            />
+            <div class="space-x-2">
+              <UButton
+                  v-if="isEditMode"
+                  :disabled="!urlsSaveable || savingUrlSet"
+                  variant="soft"
+                  @click="saveCurrentUrls"
               >
-                <div class="flex gap-4">
-                  <UInput
-                      v-model="formState.viewport.width"
-                      max="3840"
-                      min="320"
-                      placeholder="Width"
-                      type="number"
-                  >
-                    <template #leading>W</template>
-                  </UInput>
-                  <UInput
-                      v-model="formState.viewport.height"
-                      max="2160"
-                      min="320"
-                      placeholder="Height"
-                      type="number"
-                  >
-                    <template #leading>H</template>
-                  </UInput>
-                </div>
-              </UFormGroup>
-
-              <UFormGroup label="Delay before capture (ms)" name="delay">
-                <UInput
-                    v-model="formState.delay"
-                    max="10000"
-                    min="0"
-                    step="500"
-                    type="number"
-                />
-              </UFormGroup>
-
-              <UFormGroup label="Retry Options" name="retry">
-                <div class="flex gap-4">
-                  <UInput
-                      v-model="formState.retryCount"
-                      label="Retry Attempts"
-                      max="5"
-                      min="0"
-                      type="number"
-                  />
-                  <UInput
-                      v-model="formState.retryDelay"
-                      label="Retry Delay (ms)"
-                      max="10000"
-                      min="1000"
-                      step="1000"
-                      type="number"
-                  />
-                </div>
-              </UFormGroup>
-
-              <UFormGroup label="Concurrent screenshots" name="concurrency">
-                <URange
-                    v-model="formState.concurrency"
-                    :max="5"
-                    :min="1"
-                    :step="1"
-                />
-                <span class="text-sm text-gray-500">
-                  Processing {{ formState.concurrency }} URLs at once
-                </span>
-              </UFormGroup>
+                {{ savingUrlSet ? "Saving..." : "Save Changes" }}
+              </UButton>
+              <UButton
+                  v-if="isEditMode"
+                  :disabled="savingUrlSet"
+                  variant="soft"
+                  @click="cancelEdit"
+              >
+                Cancel
+              </UButton>
+              <UButton
+                  v-if="!isEditMode"
+                  :disabled="!urlsSaveable"
+                  variant="soft"
+                  @click="saveCurrentUrls"
+              >
+                Save New Set
+              </UButton>
             </div>
-          </template>
-        </UAccordion>
+          </div>
 
-        <div class="flex justify-between items-center">
-          <UButton
-              :disabled="isProcessing"
-              :loading="isProcessing"
-              color="primary"
-              type="submit"
+          <USelect
+              :options="urlSets"
+              :value="selectedSetId"
+              option-attribute="name"
+              placeholder="Load saved URL set"
+              value-attribute="id"
+              @update:model-value="loadUrlSet"
           >
-            {{ isProcessing ? "Processing..." : "Take Screenshots" }}
-          </UButton>
-
-          <span v-if="isProcessing" class="text-sm text-gray-500">
-            {{ completedUrls }} / {{ totalUrls }} completed
-          </span>
+            <template #option="{ option: set }">
+              <div class="flex justify-between items-center w-full">
+                <span>{{ set.name }}</span>
+                <div class="flex gap-2">
+                  <span class="text-sm text-gray-500">
+                    {{ set.urls.length }} URLs
+                  </span>
+                  <UButton
+                      color="red"
+                      icon="i-heroicons-trash"
+                      size="xs"
+                      variant="ghost"
+                      @click.stop="deleteSet(set.id)"
+                  />
+                </div>
+              </div>
+            </template>
+          </USelect>
         </div>
-      </UForm>
 
-      <template v-if="results.length" #footer>
-        <div class="space-y-4">
-          <h2 class="text-xl font-semibold">Results:</h2>
+        <UForm :state="formState" class="space-y-6" @submit="processUrls">
+          <UFormGroup label="Enter URLs (one per line)" name="urls">
+            <UTextarea
+                v-model="formState.urls"
+                :disabled="isProcessing"
+                :rows="6"
+                placeholder="https://example.com&#10;https://google.com"
+            />
+          </UFormGroup>
+
+          <UDivider/>
+
+          <ScreenshotOptions :disabled="isProcessing" :form-state="formState"/>
+
+          <div class="flex justify-between items-center">
+            <UButton
+                :disabled="isProcessing || !formState.urls.trim()"
+                :loading="isProcessing"
+                color="primary"
+                type="submit"
+            >
+              {{ isProcessing ? "Processing..." : "Take Screenshots" }}
+            </UButton>
+
+            <span v-if="isProcessing" class="text-sm text-gray-500">
+              {{ completedUrls }} / {{ totalUrls }} completed
+            </span>
+          </div>
+        </UForm>
+      </div>
+      <template v-if="isProcessing">
+        <UCard class="p-4">
+          <h2 class="text-xl font-semibold mb-2">
+            Processing URLs... {{ completedUrls }} / {{ totalUrls }}
+          </h2>
           <UProgress
-              v-if="isProcessing"
               :value="(completedUrls / totalUrls) * 100"
               color="primary"
           />
-
-          <div class="space-y-2">
-            <UCard
-                v-for="(result, index) in results"
-                :key="index"
-                :ui="{ base: 'p-4', background: result.status === 'success' ? 'bg-green-50' : 'bg-red-50' }"
-            >
-              <div class="flex gap-4">
-                <img
-                    v-if="result.status === 'success' && result.thumbnailPath"
-                    :src="result.thumbnailPath"
-                    alt="Screenshot thumbnail"
-                    class="w-32 h-24 object-cover rounded border"
-                />
-                <div class="flex-1">
-                  <p class="font-medium">{{ result.url }}</p>
-                  <template v-if="result.status === 'success'">
-                    <div class="mt-2 flex gap-2">
-                      <UButton
-                          :to="result.path"
-                          color="primary"
-                          size="sm"
-                          target="_blank"
-                          variant="soft"
-                      >
-                        View Screenshot
-                      </UButton>
-                      <UButton
-                          color="gray"
-                          icon="i-heroicons-arrow-down-tray"
-                          size="sm"
-                          variant="soft"
-                          @click="downloadScreenshot(result)"
-                      >
-                        Download
-                      </UButton>
-                    </div>
-                  </template>
-                  <template v-else>
-                    <div class="mt-2">
-                      <p class="text-red-600">
-                        Error: {{ result.error }}
-                        <template v-if="result.attempts && result.attempts > 1">
-                          (After {{ result.attempts }} attempts)
-                        </template>
-                      </p>
-                    </div>
-                  </template>
-                </div>
-              </div>
-            </UCard>
-          </div>
+        </UCard>
+      </template>
+      <template v-else-if="hasSuccessfulScreenshots && !isProcessing">
+        <div class="mt-4 flex justify-end space-x-2">
+          <UButton
+              variant="soft"
+              @click="resetAndShowForm"
+          >
+            Take New Screenshots
+          </UButton>
+          <UButton
+              variant="soft"
+              @click="clearResults"
+          >
+            Clear Results
+          </UButton>
+        </div>
+      </template>
+      <template #footer>
+        <ScreenshotResults
+            :completed-urls="completedUrls"
+            :is-processing="isProcessing"
+            :results="results"
+            :total-urls="totalUrls"
+            @download="downloadScreenshot"
+        />
+        <div v-if="hasSuccessfulScreenshots && !isProcessing" class="mt-4 flex justify-end space-x-2">
+          <UButton
+              variant="soft"
+              @click="resetAndShowForm"
+          >
+            Take New Screenshots
+          </UButton>
+          <UButton
+              variant="soft"
+              @click="clearResults"
+          >
+            Clear Results
+          </UButton>
         </div>
       </template>
     </UCard>
@@ -241,62 +165,7 @@
 </template>
 
 <script lang="ts" setup>
-import JSZip from "jszip"
-import { saveAs } from "file-saver"
-import type { DevicePreset, ScreenshotOptions, ScreenshotResult } from "~/types/screenshot"
-import { DEVICE_PRESETS } from "~/types/screenshot"
-
-
-const { saveUrlSet, getUrlSets, deleteUrlSet } = useUrlStorage()
-const urlSets = ref<UrlSet[]>([])
-const newSetName = ref('')
-const selectedSetId = ref<number>()
-
-const urlsSaveable = computed(() => formState.urls.trim().length>0 && newSetName.value.trim().length>0)
-
-onMounted(async () => {
-  await loadUrlSets()
-})
-
-async function loadUrlSets() {
-  urlSets.value = await getUrlSets()
-}
-
-async function saveCurrentUrls() {
-  if (!formState.urls.trim() || !newSetName.value.trim()) return
-
-  const urls = formState.urls.split('\n')
-    .map(url => url.trim())
-    .filter(Boolean)
-
-  await saveUrlSet(newSetName.value, urls)
-  newSetName.value = ''
-  await loadUrlSets()
-}
-
-async function loadUrlSet(id: number) {
-  console.log('Loading URL set:', {id})
-  const set = urlSets.value.find(s => s.id.toString() === id)
-  if (set) {
-    newSetName.value = set.name
-    formState.urls = set.urls.join('\n')
-  } else {
-    console.log('URL set not found:', id)
-    formState.urls = ''
-  }
-  selectedSetId.value = undefined
-}
-
-async function deleteSet(id?: number) {
-  if (!id) return
-
-  try {
-    await deleteUrlSet(id)
-    await loadUrlSets()
-  } catch (error) {
-    console.error('Failed to delete URL set:', error)
-  }
-}
+import { DEVICE_PRESETS, type ScreenshotOptions } from "~/types/screenshot"
 
 interface FormState {
   urls: string
@@ -311,6 +180,48 @@ interface FormState {
   retryDelay: number
 }
 
+const {saveUrlSet, getUrlSets, deleteUrlSet, updateUrlSet} = useUrlStorage()
+const {
+  isProcessing,
+  isDownloading,
+  results,
+  completedUrls,
+  totalUrls,
+  hasSuccessfulScreenshots,
+  processInBatches,
+  downloadScreenshot,
+  downloadAllScreenshots
+} = useScreenshots()
+
+const urlSets = ref<UrlSet[]>([])
+const newSetName = ref("")
+const selectedSetId = useCookie<string>("selectedSetId", {
+  default: () => "",
+  maxAge: 60 * 60 * 24 * 7, // 7 days
+  sameSite: "strict",
+  path: "/",  // Ensure cookie is available across all paths
+  watch: true
+})
+
+const isEditMode = ref(false)
+const showForm = ref(true)
+
+function clearResults() {
+  results.value = []
+  completedUrls.value = 0
+  totalUrls.value = 0
+  showForm.value = true
+
+}
+
+function resetAndShowForm() {
+  clearResults()
+  if (!isEditMode.value) {
+    formState.urls = ""
+  }
+  showForm.value = true
+}
+
 const formState = reactive<FormState>({
   urls: "",
   viewport: {
@@ -318,151 +229,162 @@ const formState = reactive<FormState>({
     height: 1080
   },
   delay: 2000,
-  devicePresetName: "Custom",
+  devicePresetName: "Desktop",
   concurrency: 2,
   retryCount: 2,
   retryDelay: 2000
 })
 
-
-const isProcessing = ref(false)
-const isDownloading = ref(false)
-const results = ref<ScreenshotResult[]>([])
-const completedUrls = ref(0)
-const totalUrls = ref(0)
-
-
-const devicePreset = computed(() =>
-   DEVICE_PRESETS.find(preset => preset.name === formState.devicePresetName)
+const urlsSaveable = computed(() =>
+   formState.urls.trim().length > 0 && newSetName.value.trim().length > 0
 )
 
-watch(devicePreset, () => {
-  if (devicePreset.value) updateViewportFromPreset(devicePreset.value)
+onMounted(async () => {
+  await loadUrlSets()
+  console.log("Initial cookie value:", selectedSetId.value)
+  // Check for non-empty string instead of undefined
+  if (selectedSetId.value && selectedSetId.value !== "" && urlSets.value.length > 0) {
+    const selectedSet = urlSets.value.find(s => s.id.toString() === selectedSetId.value.toString())
+    if (selectedSet) {
+      // Load the set data
+      formState.urls = selectedSet.urls.join("\n")
+      newSetName.value = selectedSet.name
+      isEditMode.value = true
+    } else {
+      // If the set no longer exists, clear the cookie
+      selectedSetId.value = ""
+      formState.urls = ""
+      newSetName.value = ""
+      isEditMode.value = false
+    }
+  }
+
+  formState.devicePresetName = DEVICE_PRESETS[0].name
 })
 
-const hasSuccessfulScreenshots = computed(() =>
-   results.value.some(r => r.status === "success")
-)
-
-// URL validation regex
-const URL_REGEX = /^https?:\/\/.+\..+/i
-
-function validateUrls(urls: string[]): string[] {
-  return urls.filter(url => URL_REGEX.test(url))
+async function loadUrlSets() {
+  urlSets.value = await getUrlSets()
 }
 
-function updateViewportFromPreset(preset: DevicePreset | null) {
-  if (preset) {
-    formState.viewport.height = preset.height
-    formState.viewport.width = preset.width
-  }
-}
+const savingUrlSet = ref(false)
 
-async function processWithRetry(url: string, options: ScreenshotOptions): Promise<ScreenshotResult> {
-  let attempts = 0
-  while (attempts <= options.retryCount) {
-    attempts++
-    try {
-      const response = await $fetch<ScreenshotResult>("/api/screenshots", {
-        method: "POST",
-        body: {url, options}
-      })
-      if (response.status === "success") {
-        return {...response, attempts}
-      }
-      await new Promise(resolve => setTimeout(resolve, options.retryDelay))
-    } catch (error) {
-      if (attempts > options.retryCount) {
-        return {
-          url,
-          status: "error",
-          error: error instanceof Error ? error.message : "Unknown error",
-          attempts
-        }
-      }
-      await new Promise(resolve => setTimeout(resolve, options.retryDelay))
-    }
-  }
-  return {
-    url,
-    status: "error",
-    error: `Failed after ${attempts} attempts`,
-    attempts
-  }
-}
+async function saveCurrentUrls() {
+  if (!formState.urls.trim() || !newSetName.value.trim()) return
 
-async function processInBatches(urls: string[]) {
-  const validUrls = validateUrls(urls)
-  totalUrls.value = validUrls.length
-  completedUrls.value = 0
-  results.value = []
+  const urls = formState.urls.split("\n")
+     .map(url => url.trim())
+     .filter(Boolean)
 
-  const options: ScreenshotOptions = {
-    viewport: formState.viewport,
-    delay: formState.delay,
-    retryCount: formState.retryCount,
-    retryDelay: formState.retryDelay
-  }
+  savingUrlSet.value = true
 
-  if (formState.devicePresetName && devicePreset.value) {
-    options.devicePreset = formState.devicePresetName
-    options.userAgent = devicePreset.value.userAgent
-    options.isMobile = devicePreset.value.isMobile
-  }
-
-  for (let i = 0; i < validUrls.length; i += formState.concurrency) {
-    const batch = validUrls.slice(i, i + formState.concurrency)
-    const promises = batch.map(url => processWithRetry(url, options))
-    const batchResults = await Promise.all(promises)
-    results.value.push(...batchResults)
-    completedUrls.value += batch.length
-  }
-}
-
-async function downloadScreenshot(result: ScreenshotResult) {
-  if (result.status !== "success" || !result.path) return
-
-  const response = await fetch(result.path)
-  const blob = await response.blob()
-  const filename = result.filename || "screenshot.png"
-  saveAs(blob, filename)
-}
-
-async function downloadAllScreenshots() {
-  if (!hasSuccessfulScreenshots.value) return
-
-  isDownloading.value = true
   try {
-    const zip = new JSZip()
-    const successfulResults = results.value.filter(r => r.status === "success" && r.path)
-
-    for (const result of successfulResults) {
-      if (result.path) {
-        const response = await fetch(result.path)
-        const blob = await response.blob()
-        zip.file(result.filename || "screenshot.png", blob)
+    // If we're in edit mode but the name has changed, create a new set
+    if (isEditMode.value && selectedSetId.value) {
+      const currentSet = urlSets.value.find(s => s.id === selectedSetId.value)
+      if (currentSet && currentSet.name === newSetName.value) {
+        // Same name, update existing set
+        await updateUrlSet(selectedSetId.value, urls)
+        const currentId = selectedSetId.value
+        await loadUrlSets()
+        selectedSetId.value = currentId
+      } else {
+        // Name changed, create new set
+        const newSet = await saveUrlSet(newSetName.value, urls)
+        selectedSetId.value = newSet.id
+        await loadUrlSets()
       }
+    } else {
+      // Not in edit mode, always create new set
+      const newSet = await saveUrlSet(newSetName.value, urls)
+      if (newSet.id) {
+        selectedSetId.value = newSet.id
+      }
+      await loadUrlSets()
     }
 
-    const content = await zip.generateAsync({type: "blob"})
-    saveAs(content, `screenshots-${Date.now()}.zip`)
+    isEditMode.value = true
   } finally {
-    isDownloading.value = false
+    savingUrlSet.value = false
   }
 }
 
-async function processUrls() {
-  if (!formState.urls.trim()) {
+async function loadUrlSet(id: string) {
+  const set = urlSets.value.find(s => s.id === id)
+  if (set) {
+    isEditMode.value = true
+    newSetName.value = set.name
+    formState.urls = set.urls.join("\n")
+    selectedSetId.value = id  // Update cookie
+  } else {
+    console.warn(`URL set not found: ${id}`)
+    isEditMode.value = false
+    newSetName.value = ""
+    formState.urls = ""
+    selectedSetId.value = undefined  // Clear cookie
+  }
+}
+
+function cancelEdit() {
+  isEditMode.value = false
+  selectedSetId.value = ""  // Use empty string instead of undefined
+  newSetName.value = ""
+  formState.urls = ""
+}
+
+
+async function deleteSet(id?: string) {
+  if (!id) return
+
+  try {
+    await deleteUrlSet(id)
+    if (id === selectedSetId.value) {
+      selectedSetId.value = ""  // Use empty string instead of undefined
+      isEditMode.value = false
+      newSetName.value = ""
+      formState.urls = ""
+    }
+    await loadUrlSets()
+  } catch (error) {
+    console.error("Failed to delete URL set:", error)
+  }
+}
+
+async function processUrls(e: Event) {
+  e.preventDefault() // Prevent form submission
+
+  if (!formState.urls?.trim()) {
+    alert("Please enter at least one URL to process.")
+    return
+  } else if (isProcessing.value) {
+    alert("A batch process is already in progress.")
     return
   }
 
-  isProcessing.value = true
-  const urls = formState.urls.split("\n").map(url => url.trim()).filter(Boolean)
+  const urls = formState.urls.split("\n")
+     .map(url => url.trim())
+     .filter(Boolean)
 
+  totalUrls.value = urls.length // Set total URLs before processing
+  console.log(`Processing ${totalUrls.value} URLs...`)
+  showForm.value = false
   try {
-    await processInBatches(urls)
+    isProcessing.value = true
+    const options: ScreenshotOptions = {
+      viewport: formState.viewport,
+      delay: formState.delay,
+      retryCount: formState.retryCount,
+      retryDelay: formState.retryDelay,
+      devicePreset: formState.devicePresetName,
+      concurrency: formState.concurrency // Make sure this is included
+    }
+    await processInBatches(urls, options)
+  } catch (error) {
+    console.error("Failed to process URLs:", error)
+    alert("Failed to process URLs. Please check the console for more details.")
   } finally {
+    console.log("Processing complete.")
     isProcessing.value = false
   }
 }
+
 </script>
