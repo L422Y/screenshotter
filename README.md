@@ -25,8 +25,8 @@ Note: This project is still in development and may contain bugs or incomplete fe
   - Retry attempts and delays
 ## Screenshots
 
-![img.png](img.png)
-![img_1.png](img_1.png)
+![img.png](details/img.png)
+![img_1.png](details/img_1.png)
 
 ## Prerequisites
 
