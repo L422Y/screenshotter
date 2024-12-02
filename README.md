@@ -33,7 +33,7 @@ Note: This project is still in development and may contain bugs or incomplete fe
 
 1. Clone the repository:
 ```bash
-git clone [repository-url]
+git clone https://github.com/L422Y/screenshotter/
 cd batch-screenshot-tool
 ```
 
