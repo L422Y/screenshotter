@@ -1,75 +1,122 @@
-# Nuxt Minimal Starter
+# Batch Screenshot Tool
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A powerful web tool built with Nuxt 3 that allows you to take and manage batch screenshots of multiple URLs simultaneously. The tool uses Playwright for high-quality screenshots and includes features like concurrent processing, retry mechanisms, and URL set management.
 
-## Setup
+Currently meant to run locally, this tool is ideal for web developers, designers, and QA testers who need to capture screenshots of multiple URLs for testing, documentation, or presentation purposes.
 
-Make sure to install dependencies:
+Note: This project is still in development and may contain bugs or incomplete features.
 
+## Features
+
+- **Batch Processing**: Take screenshots of multiple URLs concurrently
+- **URL Set Management**: Save and load sets of URLs for repeated use
+- **Flexible Device Presets**: Choose from predefined device viewports or set custom dimensions
+- **Retry Mechanism**: Automatically retry failed screenshots with configurable attempts and delays
+- **Progress Tracking**: Real-time progress monitoring with detailed status updates
+- **Results Management**: 
+  - View thumbnails of successful screenshots
+  - Download individual screenshots
+  - Batch download all screenshots as a ZIP file
+- **Error Handling**: Detailed error reporting for failed screenshots
+- **Customization Options**:
+  - Viewport dimensions
+  - Capture delay
+  - Concurrent processing limit
+  - Retry attempts and delays
+
+## Prerequisites
+
+- Node.js 16.x or later
+- Playwright needs to be installed (will be installed with dependencies)
+
+## Installation
+
+1. Clone the repository:
 ```bash
-# npm
+git clone [repository-url]
+cd batch-screenshot-tool
+```
+
+2. Install dependencies:
+```bash
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
+# or
 yarn install
-
-# bun
-bun install
+# or
+pnpm install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
+3. Install Playwright browsers:
 ```bash
-# npm
-npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
+npx playwright install chromium
 ```
+
+## Development
+
+Start the development server:
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+```
+
+The application will be available at `http://localhost:3000`
 
 ## Production
 
-Build the application for production:
-
+1. Build the application:
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
+# or
 yarn build
-
-# bun
-bun run build
+# or
+pnpm build
 ```
 
-Locally preview production build:
-
+2. Preview the production build:
 ```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
+# or
 yarn preview
-
-# bun
-bun run preview
+# or
+pnpm preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## Usage
+
+1. **Enter URLs**:
+   - Type or paste URLs (one per line) in the input area
+   - Optionally save the URL set with a name for future use
+
+2. **Configure Screenshot Options**:
+   - Select a device preset or set custom viewport dimensions
+   - Adjust the capture delay if needed for dynamic content
+   - Set concurrent processing limit based on your needs
+   - Configure retry settings for handling failures
+
+3. **Process Screenshots**:
+   - Click "Take Screenshots" to start the batch process
+   - Monitor progress in real-time
+   - View results as they complete
+
+4. **Manage Results**:
+   - View thumbnails and full screenshots
+   - Download individual screenshots
+   - Download all successful screenshots as a ZIP file
+   - Clear results or take new screenshots as needed
+
+## Technical Details
+
+- Built with Nuxt 3 and Vue 3
+- Uses Playwright for browser automation
+- Implements concurrent processing with configurable limits
+- Includes automatic retry mechanism for failed attempts
+- Generates thumbnails using Sharp
+- Supports ZIP download using JSZip
+- Persistent storage for URL sets
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
